@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>เก็บเหรียญหนีระเบิด (Coin Rush: Bomb Escape)</title>
+<style>
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #1b1f3b;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Trebuchet MS', 'Segoe UI', sans-serif;
+  }
+  #game-container {
+    box-shadow: 0 0 40px rgba(0,0,0,0.6);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.70.0/phaser.min.js"></script>
+</head>
+<body>
+<div id="game-container"></div>
+<script>
+
+const GAME_W = 480;
+const GAME_H = 720;
+const GAME_TIME = 60; // วินาที
+const PLAYER_SPEED = 380;
+const HP_MAX = 3;
+
+// ---------- Helper: วาดกราฟิกด้วยโค้ด (ไม่ใช้รูปภาพภายนอก) ----------
+function createTextures(scene) {
+  // เหรียญ (Coin)
+  let g = scene.add.graphics();
+  g.fillStyle(0xffd447, 1);
+  g.fillCircle(16, 16, 16);
+  g.lineStyle(3, 0xe8a900, 1);
+  g.strokeCircle(16, 16, 16);
+  g.fillStyle(0xe8a900, 1);
+  g.fillCircle(16, 16, 6);
+  g.generateTexture('coin', 32, 32);
+  g.destroy();
+
+  // ระเบิด (Bomb)
+  g = scene.add.graphics();
+  g.fillStyle(0x2b2b2b, 1);
+  g.fillCircle(18, 20, 16);
+  g.fillStyle(0x555555, 1);
+  g.fillCircle(12, 14, 5);
+  g.lineStyle(4, 0x8a5a2b, 1);
+  g.beginPath();
+  g.moveTo(18, 4);
+  g.lineTo(24, -4);
+  g.strokePath();
+  g.fillStyle(0xff6b3d, 1);
+  g.fillCircle(24, -5, 4);
+  g.generateTexture('bomb', 36, 36);
+  g.destroy();
+
+  // พื้นหลัง (ลายจุดดาว)
+  g = scene.add.graphics();
+  g.fillStyle(0x232a52, 1);
+  g.fillRect(0, 0, GAME_W, GAME_H);
+  for (let i = 0; i < 60; i++) {
+    const x = Phaser.Math.Between(0, GAME_W);
+    const y = Phaser.Math.Between(0, GAME_H);
+    const r = Phaser.Math.Between(1, 2);
+    g.fillStyle(0x3d478a, 1);
+    g.fillCircle(x, y, r);
+  }
+  g.generateTexture('bg', GAME_W, GAME_H);
+  g.destroy();
+}
+
+// ---------- Scene 1: Title / Menu ----------
+class TitleScene extends Phaser.Scene {
+  constructor() { super('TitleScene'); }
+
+  preload() {
+    // สไปรท์ตัวเป็ด: แถว1 (index0) = ท่ายืนนิ่ง (idle) 2 เฟรม, แถว2 (index1) = ท่าเดิน (walk) 6 เฟรม
+    this.load.spritesheet('ducky', 'images/spr-ducky.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.image('heart', 'images/hp.png');
+    this.load.audio('pop', 'images/pop.mp3');
+  }
+
+  create() {
+    createTextures(this);
+
+    if (!this.anims.exists('duck-idle')) {
+      this.anims.create({
+        key: 'duck-idle',
+        frames: this.anims.generateFrameNumbers('ducky', { start: 0, end: 1 }),
+        frameRate: 3,
+        repeat: -1
+      });
+    }
+    if (!this.anims.exists('duck-walk')) {
+      this.anims.create({
+        key: 'duck-walk',
+        frames: this.anims.generateFrameNumbers('ducky', { start: 6, end: 11 }),
+        frameRate: 12,
+        repeat: -1
+      });
+    }
+
+    this.add.image(GAME_W/2, GAME_H/2, 'bg');
+
+    this.add.text(GAME_W/2, 130, 'Coin Rush: Bomb Escape', {
+      fontSize: '34px', color: '#ffd447', fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.add.text(GAME_W/2, 170, '-----------------------', {
+      fontSize: '18px', color: '#9fb0ff'
+    }).setOrigin(0.5);
+
+    this.add.image(GAME_W/2 - 60, 260, 'coin').setScale(1.4);
+    this.add.image(GAME_W/2 + 60, 260, 'bomb').setScale(1.4);
+    const preview = this.add.sprite(GAME_W/2, 345, 'ducky').setScale(2.2);
+    preview.play('duck-idle');
+
+    const howTo = [
+      '(How to Play)',
+      '• ใช้ปุ่ม ← → หรือ A / D เพื่อเคลื่อนที่',
+      '• เก็บเหรียญ = ได้ +10 คะแนน',
+      '• ชนระเบิด = เสีย HP 1 ดวง',
+      '• อยู่รอดให้ครบ 60 วินาทีเพื่อชนะ!'
+    ];
+    this.add.text(GAME_W/2, 430, howTo, {
+      fontSize: '16px', color: '#ffffff', align: 'center', lineSpacing: 8
+    }).setOrigin(0.5);
+
+    const startBtn = this.add.text(GAME_W/2, 600, 'เริ่มเกม (START)', {
+      fontSize: '26px', color: '#1b1f3b', backgroundColor: '#4fd3ff',
+      padding: { x: 24, y: 12 }, fontStyle: 'bold'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    startBtn.on('pointerover', () => startBtn.setStyle({ backgroundColor: '#7fe3ff' }));
+    startBtn.on('pointerout', () => startBtn.setStyle({ backgroundColor: '#4fd3ff' }));
+    startBtn.on('pointerdown', () => this.scene.start('GameScene'));
+
+    this.input.keyboard.once('keydown-SPACE', () => this.scene.start('GameScene'));
+    this.input.keyboard.once('keydown-ENTER', () => this.scene.start('GameScene'));
+  }
+}
+
+// ---------- Scene 2: Main Gameplay ----------
+class GameScene extends Phaser.Scene {
+  constructor() { super('GameScene'); }
+
+  create() {
+    this.add.image(GAME_W/2, GAME_H/2, 'bg');
+
+    this.score = 0;
+    this.hp = HP_MAX;
+    this.timeLeft = GAME_TIME;
+    this.gameEnded = false;
+
+    // ผู้เล่น (ตัวเป็ด)
+    this.player = this.physics.add.sprite(GAME_W/2, GAME_H - 80, 'ducky');
+    this.player.setCollideWorldBounds(true);
+    this.player.setScale(2.2);
+    this.player.body.setSize(28, 28).setOffset(2, 4);
+    this.player.play('duck-idle');
+    this.facingRight = true;
+
+    // กลุ่มเหรียญ / ระเบิด
+    this.coins = this.physics.add.group();
+    this.bombs = this.physics.add.group();
+
+    // ควบคุม
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.keyA = this.input.keyboard.addKey('A');
+    this.keyD = this.input.keyboard.addKey('D');
+
+    // ---------- UI ----------
+    const uiStyle = { fontSize: '20px', color: '#ffffff', fontStyle: 'bold' };
+    this.scoreText = this.add.text(16, 16, 'คะแนน: 0', uiStyle);
+    this.timerText = this.add.text(GAME_W/2, 16, 'เวลา: 60', uiStyle).setOrigin(0.5, 0);
+
+    this.hpIcons = [];
+    for (let i = 0; i < HP_MAX; i++) {
+      const icon = this.add.image(GAME_W - 24 - i * 30, 26, 'heart').setScale(0.09);
+      this.hpIcons.push(icon);
+    }
+
+    // ---------- Spawners ----------
+    this.coinTimer = this.time.addEvent({
+      delay: 650, loop: true, callback: this.spawnCoin, callbackScope: this
+    });
+    this.bombTimer = this.time.addEvent({
+      delay: 900, loop: true, callback: this.spawnBomb, callbackScope: this
+    });
+    this.gameTimer = this.time.addEvent({
+      delay: 1000, loop: true, callback: this.tickTime, callbackScope: this
+    });
+
+    // ---------- Collisions ----------
+    this.physics.add.overlap(this.player, this.coins, this.collectCoin, null, this);
+    this.physics.add.overlap(this.player, this.bombs, this.hitBomb, null, this);
+  }
+
+  spawnCoin() {
+    if (this.gameEnded) return;
+    const x = Phaser.Math.Between(30, GAME_W - 30);
+    const coin = this.coins.create(x, -20, 'coin');
+    coin.setVelocityY(Phaser.Math.Between(160, 240));
+  }
+
+  spawnBomb() {
+    if (this.gameEnded) return;
+    const x = Phaser.Math.Between(30, GAME_W - 30);
+    const bomb = this.bombs.create(x, -20, 'bomb');
+    bomb.setVelocityY(Phaser.Math.Between(200, 320));
+  }
+
+  collectCoin(player, coin) {
+    coin.destroy();
+    this.sound.play('pop', { volume: 0.6 });
+    this.score += 10;
+    this.scoreText.setText('คะแนน: ' + this.score);
+  }
+
+  hitBomb(player, bomb) {
+    bomb.destroy();
+    this.hp -= 1;
+    if (this.hpIcons[this.hp]) {
+      this.hpIcons[this.hp].setTint(0x555555).setAlpha(0.5);
+    }
+    this.cameras.main.shake(150, 0.01);
+
+    if (this.hp <= 0) {
+      this.endGame(false);
+    }
+  }
+
+  tickTime() {
+    if (this.gameEnded) return;
+    this.timeLeft -= 1;
+    this.timerText.setText('เวลา: ' + this.timeLeft);
+    if (this.timeLeft <= 0) {
+      this.endGame(true);
+    }
+  }
+
+  endGame(won) {
+    if (this.gameEnded) return;
+    this.gameEnded = true;
+    this.coinTimer.remove();
+    this.bombTimer.remove();
+    this.gameTimer.remove();
+    this.physics.pause();
+
+    this.time.delayedCall(400, () => {
+      this.scene.start('GameOverScene', { score: this.score, won: won });
+    });
+  }
+
+  update() {
+    if (this.gameEnded) return;
+
+    const left = this.cursors.left.isDown || this.keyA.isDown;
+    const right = this.cursors.right.isDown || this.keyD.isDown;
+
+    if (left) {
+      this.player.setVelocityX(-PLAYER_SPEED);
+      this.player.setFlipX(true);
+      if (this.player.anims.currentAnim?.key !== 'duck-walk') this.player.play('duck-walk');
+    } else if (right) {
+      this.player.setVelocityX(PLAYER_SPEED);
+      this.player.setFlipX(false);
+      if (this.player.anims.currentAnim?.key !== 'duck-walk') this.player.play('duck-walk');
+    } else {
+      this.player.setVelocityX(0);
+      if (this.player.anims.currentAnim?.key !== 'duck-idle') this.player.play('duck-idle');
+    }
+
+    // ทำลายวัตถุที่หลุดจอด้านล่าง
+    this.coins.children.each((c) => { if (c.y > GAME_H + 20) c.destroy(); });
+    this.bombs.children.each((b) => { if (b.y > GAME_H + 20) b.destroy(); });
+  }
+}
+
+// ---------- Scene 3: Game Over ----------
+class GameOverScene extends Phaser.Scene {
+  constructor() { super('GameOverScene'); }
+
+  init(data) {
+    this.finalScore = data.score || 0;
+    this.won = !!data.won;
+  }
+
+  create() {
+    this.add.image(GAME_W/2, GAME_H/2, 'bg');
+
+    this.add.text(GAME_W/2, 200, this.won ? 'ผ่าน!' : 'จบเกม (Game Over)', {
+      fontSize: '32px', color: this.won ? '#4fd3ff' : '#ff5566', fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    this.add.text(GAME_W/2, 250, this.won ? 'คุณรอดจนหมดเวลา!' : 'You die', {
+      fontSize: '16px', color: '#ffffff'
+    }).setOrigin(0.5);
+
+    this.add.image(GAME_W/2, 330, this.won ? 'coin' : 'bomb').setScale(2.5);
+
+    this.add.text(GAME_W/2, 420, 'คะแนน: ' + this.finalScore, {
+      fontSize: '24px', color: '#ffd447', fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    const replayBtn = this.add.text(GAME_W/2, 540, 'เล่นใหม่ (REPLAY)', {
+      fontSize: '24px', color: '#1b1f3b', backgroundColor: '#4fd3ff',
+      padding: { x: 20, y: 10 }, fontStyle: 'bold'
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    replayBtn.on('pointerover', () => replayBtn.setStyle({ backgroundColor: '#7fe3ff' }));
+    replayBtn.on('pointerout', () => replayBtn.setStyle({ backgroundColor: '#4fd3ff' }));
+    replayBtn.on('pointerdown', () => this.scene.start('GameScene'));
+
+    const menuBtn = this.add.text(GAME_W/2, 610, 'กลับเมนู (MENU)', {
+      fontSize: '18px', color: '#ffffff', backgroundColor: '#3d478a',
+      padding: { x: 16, y: 8 }
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    menuBtn.on('pointerdown', () => this.scene.start('TitleScene'));
+
+    this.input.keyboard.once('keydown-SPACE', () => this.scene.start('GameScene'));
+  }
+}
+
+// ---------- Config ----------
+const config = {
+  type: Phaser.AUTO,
+  width: GAME_W,
+  height: GAME_H,
+  parent: 'game-container',
+  backgroundColor: '#1b1f3b',
+  physics: {
+    default: 'arcade',
+    arcade: { gravity: { y: 0 }, debug: false }
+  },
+  scene: [TitleScene, GameScene, GameOverScene]
+};
+
+new Phaser.Game(config);
+</script>
+</body>
+</html>
