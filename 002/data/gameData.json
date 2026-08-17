@@ -1,0 +1,18 @@
+{
+  "gameSettings": {
+    "duration": 45,
+    "initialHp": 5,
+    "playerSpeed": 360,
+    "spawnDelay": 900
+  },
+  "scores": {
+    "normalFish": 10,
+    "goldFish": 25,
+    "bonePenalty": 8
+  },
+  "itemChances": {
+    "goldFishMax": 3,
+    "boneMax": 6,
+    "specialFishMax": 8
+  }
+}
