@@ -1,0 +1,36 @@
+{
+  "world": {
+    "height": 540,
+    "gravityY": 1000
+  },
+  "player": {
+    "startX": 80,
+    "startY": 420,
+    "speed": 220,
+    "jumpVelocity": -560,
+    "maxHp": 3
+  },
+  "timeLimit": 60,
+  "scoring": {
+    "coin": 10,
+    "bonusCoin": 25,
+    "checkpoint": 25,
+    "goal": 100,
+    "hazardHit": -10,
+    "timeBonusPerSecond": 1
+  },
+  "levelGen": {
+    "groundY": 500,
+    "startSafeZone": 300,
+    "endSafeZone": 300,
+    "levelLengthMin": 5200,
+    "levelLengthMax": 6200,
+    "checkpointCount": 2,
+    "groundCoinChance": 0.4,
+    "tiers": [
+      { "untilRatio": 0.35, "gapMin": 70,  "gapMax": 110, "spikeChance": 0.25, "platformChance": 0.28, "flatMin": 220, "flatMax": 340 },
+      { "untilRatio": 0.7,  "gapMin": 100, "gapMax": 150, "spikeChance": 0.4,  "platformChance": 0.38, "flatMin": 180, "flatMax": 300 },
+      { "untilRatio": 1.0,  "gapMin": 130, "gapMax": 190, "spikeChance": 0.55, "platformChance": 0.46, "flatMin": 150, "flatMax": 260 }
+    ]
+  }
+}
