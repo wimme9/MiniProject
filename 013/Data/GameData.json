@@ -1,0 +1,37 @@
+{
+    "gameConfig": {
+        "worldWidth": 1280,
+        "worldHeight": 720,
+        "playerSpeed": 300,
+        "initialTime": 60,
+        "comboTimeLimit": 3000,
+        "obstacleCount": 18,
+        "cardCount": 15
+    },
+    "playerConfig": {
+        "displaySize": [96, 96],
+        "bodySize": [22, 22],
+        "bodyOffset": [5, 5]
+    },
+    "comboThresholds": [
+        { "minCombo": 12, "multiplier": 10, "label": "MAX COMBO!" },
+        { "minCombo": 9, "multiplier": 5 },
+        { "minCombo": 7, "multiplier": 4 },
+        { "minCombo": 5, "multiplier": 3 },
+        { "minCombo": 3, "multiplier": 2 },
+        { "minCombo": 0, "multiplier": 1 }
+    ],
+    "cardTypes": [
+        { "maxChance": 40, "key": "card_common", "points": 10 },
+        { "maxChance": 70, "key": "card_rare", "points": 25 },
+        { "maxChance": 88, "key": "card_epic", "points": 50 },
+        { "maxChance": 96, "key": "card_legendary", "points": 100 },
+        { "maxChance": 99, "key": "card_mythic", "points": 200 },
+        { "maxChance": 100, "key": "card_divine", "points": 300 }
+    ],
+    "obstacleTypes": [
+        { "key": "obs_horizontal", "w": 120, "h": 40 },
+        { "key": "obs_vertical", "w": 40, "h": 120 },
+        { "key": "obs_block", "w": 80, "h": 80 }
+    ]
+}
