@@ -1,0 +1,11 @@
+{
+  "initialHearts": 3,
+  "gameDuration": 60,
+  "items": {
+    "fruit1": { "score": 10 },
+    "fruit2": { "score": 20 },
+    "fruit3": { "score": 30 },
+    "bonus": { "score": 50 },
+    "bomb": { "penalty": 30, "damage": 1 }
+  }
+}
